@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V2EX 西安交流群</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+    <style>
+        /* 基础样式 */
+        :root {
+            --background: #ffffff;
+            --foreground: #000000;
+            --muted-bg: #f5f5f5;
+            --border-color: #e5e5e5;
+            --green: #22c55e;
+            --red: #ef4444;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --background: #1a1a1a;
+                --foreground: #ffffff;
+                --muted-bg: #2a2a2a;
+                --border-color: #404040;
+                --green: #4ade80;
+                --red: #f87171;
+            }
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--background);
+            color: var(--foreground);
+            line-height: 1.5;
+        }
+
+        /* 容器样式 */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* 标题样式 */
+        .title {
+            text-align: center;
+            font-size: 1.875rem;
+            font-weight: bold;
+            margin-bottom: 2rem;
+        }
+
+        /* 提示框样式 */
+        .notice {
+            background-color: var(--muted-bg);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            max-width: 39rem;
+            margin-left: auto;
+            margin-right: auto;
+        }    
+
+        /* 二维码网格布局 */
+        .qr-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            max-width: 48rem;
+            margin: 0 auto;
+            margin-bottom: 5rem;
+        }
+
+        @media (min-width: 768px) {
+            .qr-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        /* 二维码容器样式 */
+        .qr-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .qr-wrapper {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .qr-code {
+            width: 256px;
+            height: 256px;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+        }
+
+        .qr-code.blurred {
+            filter: blur(4px);
+        }
+
+        .blocked-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(var(--background), 0.8);
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            display: none;
+        }
+
+        .qr-code.blurred + .blocked-overlay {
+            display: block;
+        }
+
+        .qr-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .status-normal {
+            color: var(--green);
+        }
+
+        .status-abnormal {
+            color: var(--red);
+        }
+
+        .float-update {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(200, 200, 200, 0.8);
+            color: #333;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            z-index: 1000;
+            text-align: center;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .float-update {
+                background-color: rgba(80, 80, 80, 0.8);
+                color: #e0e0e0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">V2EX 西安交流群</h1>
+        
+        <div class="notice">
+            扫描二维码联系管理员入群：推荐同时加入备份群聊，防止迷路。<br>备份群仅在主群被封时启用，平时禁言！
+        </div>
+        
+        <div class="qr-grid">
+            <div class="qr-container">
+                <div class="qr-wrapper">
+                    <img id="groupAdminQR" class="qr-code" alt="主群二维码">
+                </div>
+                <h2 class="qr-title">群管理二维码</h2>
+                <div class="status">
+                    主群状态：<span id="mainGroupStatus"></span>
+                </div>
+            </div>
+            
+            <div class="qr-container">
+                <div class="qr-wrapper">
+                    <img id="backupGroupQR" class="qr-code" alt="备份群二维码">
+                    <div class="blocked-overlay"></div>
+                </div>
+                <h2 class="qr-title">备份群二维码</h2>
+                <div class="status">
+                    <span id="backupGroupStatus"></span>
+                </div>
+            </div>
+        </div>
+        <p id="lastUpdated" class="float-update"></p>    
+    </div>
+
+    <script>
+        // 生成二维码的函数
+        function generateQRCode(elementId, text) {
+            const img = document.getElementById(elementId);
+            QRCode.toDataURL(text, {
+                width: 256,
+                margin: 1,
+                color: {
+                    dark: getComputedStyle(document.documentElement)
+                        .getPropertyValue('--foreground').trim(),
+                    light: getComputedStyle(document.documentElement)
+                        .getPropertyValue('--background').trim()
+                }
+            }, function (error, url) {
+                if (error) console.error(error);
+                img.src = url;
+                console.log('QR Code generated for', elementId);
+            });
+        }
+
+        // 更新群管理状态显示
+        function updateMainGroupStatus(status) {
+            const statusElement = document.getElementById('mainGroupStatus');
+            const qrCode = document.getElementById('groupAdminQR');
+            
+            if (status === 'normal') {
+                statusElement.textContent = '正常';
+                statusElement.className = 'status-normal';
+            } else {
+                statusElement.textContent = '异常';
+                statusElement.className = 'status-abnormal';
+            }
+        }
+
+        // 更新备份状态显示
+        function updateBackupGroupStatus(status) {
+            const statusElement = document.getElementById('backupGroupStatus');
+            const qrCode = document.getElementById('backupGroupQR');
+            
+            if (status === 'normal') {
+                statusElement.className = 'status-normal';
+                qrCode.classList.remove('blurred');
+            } else {
+                statusElement.className = 'status-abnormal';
+                qrCode.classList.add('blurred');
+                statusElement.textContent = '已达 200 人上限，联系群管理加入';
+            }
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+
+            fetch('https://raw.githubusercontent.com/guiqiqi/v2ex-xian/refs/heads/master/config.json')
+            .then(response => response.json())
+            .then(data => {
+                // 生成两个二维码
+                generateQRCode('groupAdminQR', data.groupAdminQR);
+                generateQRCode('backupGroupQR', data.backupGroupQR);
+                
+                // 更新主群状态显示
+                updateMainGroupStatus(data.mainGroupStatus);
+                updateBackupGroupStatus(data.backupGroupStatus);
+
+                // 监听系统主题变化，重新生成二维码以更新颜色
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+                    generateQRCode('groupAdminQR', data.groupAdminQR);
+                    generateQRCode('backupGroupQR', data.backupGroupQR);
+                });
+
+                // 设置最后一次更新日期
+                const lastUpdatedElement = document.getElementById('lastUpdated');
+                const lastUpdatedDate = new Date(data.lastUpdated);
+                lastUpdatedElement.textContent = `最后一次更新：${lastUpdatedDate.getFullYear()} 年 ${lastUpdatedDate.getMonth() + 1} 月 ${lastUpdatedDate.getDate()} 日`;
+                })
+            .catch(error => {
+                console.error('获取配置文件错误：', error);
+            });
+        });
+    </script>
+</body>
+</html>
