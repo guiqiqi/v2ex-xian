@@ -1,0 +1,2 @@
+pyzbar
+opencv-python
