@@ -47,8 +47,8 @@ if __name__ == '__main__':
         try:
             backup_link = read_qrcode(args.update)
             udpate_date = datetime.now().strftime('%Y-%m-%d')
-        except:
-            print(f'文件 {args.update} 读取失败')
+        except Exception as error:
+            print(f'文件 {args.update} 读取失败: {error}')
             exit(1)
     elif args.disable:
         backup_status = 'full'
